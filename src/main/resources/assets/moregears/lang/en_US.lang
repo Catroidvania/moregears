@@ -1,0 +1,3 @@
+tile.moregears.block_funnel_idle.name=Funnel
+tile.moregears.block_funnel_active.name=Funnel (Powered)
+config.catroidvaniagearhelper.enable_funnels.name

@@ -1,0 +1,38 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven { url 'https://cdn.fox2code.com/maven' }
+    }
+    dependencies {
+        classpath('com.fox2code.FoxLoader:dev:2.0-alpha22')
+    }
+}
+
+apply plugin: 'foxloader.dev'
+
+group = 'com.catroidvania'
+version = '1.0.0'
+
+dependencies {
+    api 'org.semver4j:semver4j:5.3.0'
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+jar {
+    from "LICENSE"
+}
+
+foxloader {
+    modId = "moregears"
+    modName = "more gears"
+    modIcon = "assets/moregears/icon.png"
+    modVersion = project.version
+    modAuthors = "catroidvania"
+    modMain = "com.catroidvania.moregears.MoreGears"
+    modDesc("more gears")
+}
