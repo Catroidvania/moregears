@@ -1,11 +1,19 @@
-# Fox Loader Example Mod
+# moregears
 
-Example mod for [FoxLoader](https://github.com/Fox2Code/FoxLoader)
+well it only adds 1 block for now but you get the idea
 
-Rat block texture by [@silveros](https://github.com/silverosre)
+## funnels
 
-## Documentation
+hoppers but like different
 
-For mixins usage check here: https://github.com/2xsaiko/mixin-cheatsheet
+inserts items that contact their input end into the container at the output end if availible
 
-For spark usage check here: https://spark.lucko.me/docs/Command-Usage
+works with chests crates drawers furnaces
+
+they dont have an inventory so you cant insert into one
+
+if powered they suck out a stack from any container at their output end and spit it out, possibly into another container
+
+powered funnels stop pulling in items
+
+hold shift while wrenching to swap to the opposite orientation
