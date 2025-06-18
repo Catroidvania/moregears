@@ -1,6 +1,8 @@
 # moregears
 
-item schmoovement
+item schmoovement ideas
+
+its not done yet but im workin on it
 
 ## funnels
 
