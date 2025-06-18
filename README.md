@@ -4,6 +4,8 @@ item schmoovement ideas
 
 its not done yet but im workin on it
 
+currently doesnt work in multiplayer
+
 ## funnels
 
 items that land on their input face (square) are inserted into the container at their output face (circle)
