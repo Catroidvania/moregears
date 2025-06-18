@@ -13,6 +13,7 @@ import net.minecraft.common.entity.EntityLiving;
 import net.minecraft.common.entity.inventory.IInventory;
 import net.minecraft.common.entity.inventory.InventoryLargeChest;
 import net.minecraft.common.entity.other.EntityItem;
+import net.minecraft.common.entity.player.EntityPlayer;
 import net.minecraft.common.item.ItemStack;
 import net.minecraft.common.item.Items;
 import net.minecraft.common.item.data.EnumTools;
@@ -23,6 +24,8 @@ import net.minecraft.common.world.World;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Random;
+
+import static com.catroidvania.moregears.MoreGears.itemsAreEqual;
 
 
 public class BlockGearFunnel extends Block {
@@ -92,62 +95,86 @@ public class BlockGearFunnel extends Block {
     public void onEntityCollidedWithBlock(World world, int x, int y, int z, Entity entity) {
         if (world.isRemote || isPowered || !MoreGears.CONFIG.enableFunnels) return;
 
-        int metadata = world.getBlockMetadata(x, y, z);
-        int rot = getOrientation(metadata);
-        int tx = x - Facing.offsetXForSide[rot];
-        int ty = y - Facing.offsetYForSide[rot];
-        int tz = z - Facing.offsetZForSide[rot];
-
-        insertEntityItem(world, tx, ty, tz, rot, entity);
-    }
-
-    public EntityItem insertEntityItem(World world, int x, int y, int z, int rot, Entity e) {
-        if (world.isRemote || !MoreGears.CONFIG.enableFunnels) return null;
-
-        if (e instanceof EntityItem entity) {
-            int bid = world.getBlockId(x, y, z);
-            Block target = Blocks.BLOCKS_LIST[bid];
-            if (target instanceof BlockContainer) {
-                TileEntity container = world.getBlockTileEntity(x, y, z);
-                if (container instanceof IInventory inventory) {
-                    if (target.blockID == Blocks.CHEST.blockID) {
-                        IInventory chestinv = getChestInventory(world, x, y, z);
-                        if (chestinv != null) addEntityItemToInventory(chestinv, entity);
-                    } else if (
-                            container instanceof TileEntityFurnace ||
-                            container instanceof TileEntityBlastFurnace ||
-                            container instanceof TileEntityRefridgifreezer) {
-                        addEntityItemToFurnace(inventory, entity, rot);
-                    } else if (container instanceof TileEntityIncinerator) {
-                        addEntityItemToIncinerator(inventory, entity, rot);
-                    } else {
-                        addEntityItemToInventory(inventory, entity);
-                    }
-                } else if (container instanceof TileEntityDrawer drawer) {
-                    addEntityItemToDrawer(drawer, entity);
-                }
+        if (entity instanceof EntityItem ei) {
+            ItemStack item;
+            boolean gotSplit = false;
+            if (ei.item.stackSize > MoreGears.CONFIG.funnelThroughputMax) {
+                item = ei.item.splitStack(MoreGears.CONFIG.funnelThroughputMax);
+                gotSplit = true;
+            } else {
+                item = ei.item;
             }
-            if (entity.isDead) {
-                return null;
+            int metadata = world.getBlockMetadata(x, y, z);
+            int rot = getOrientation(metadata);
+            int tx = x - Facing.offsetXForSide[rot];
+            int ty = y - Facing.offsetYForSide[rot];
+            int tz = z - Facing.offsetZForSide[rot];
+
+            boolean hasLeftovers = insertItemStack(world, tx, ty, tz, rot, item);
+            if (!hasLeftovers && !gotSplit) {
+                entity.setEntityDead();
+            } else if (hasLeftovers && gotSplit) {
+                EntityItem newEI = new EntityItem(world, entity.posX, entity.posY, entity.posZ, item);
+                newEI.motionX = entity.motionX;
+                newEI.motionY = entity.motionY;
+                newEI.motionZ = entity.motionZ;
+                world.entityJoinedWorld(newEI);
             }
-            return entity;
         }
-        return null;
     }
 
-    public boolean tryAddEntityItemToSlot(IInventory inventory, EntityItem entity, int slot) {
-        ItemStack item = entity.item;
+    /// returns true if the stacksize is > 0
+    public boolean insertItemStack(World world, int x, int y, int z, int rot, ItemStack item) {
+        return insertItemStackRec(world, x, y, z, rot, item, 0);
+    }
+
+    public boolean insertItemStackRec(World world, int x, int y, int z, int rot, ItemStack item, int depth) {
+        if (world.isRemote || !MoreGears.CONFIG.enableFunnels || MoreGears.CONFIG.funnelThroughputMax == 0) return true;
+
+        int bid = world.getBlockId(x, y, z);
+        Block target = Blocks.BLOCKS_LIST[bid];
+        if (target instanceof BlockContainer) {
+            TileEntity container = world.getBlockTileEntity(x, y, z);
+            if (container instanceof IInventory inventory) {
+                if (target.blockID == Blocks.CHEST.blockID) {
+                    IInventory chestinv = getChestInventory(world, x, y, z);
+                    if (chestinv != null) return addItemStackToInventory(chestinv, item);
+                } else if (
+                        container instanceof TileEntityFurnace ||
+                                container instanceof TileEntityBlastFurnace ||
+                                container instanceof TileEntityRefridgifreezer) {
+                    return addItemStackToFurnace(inventory, item, rot);
+                } else if (container instanceof TileEntityIncinerator) {
+                    return addItemStackToIncinerator(inventory, item, rot);
+                } else {
+                    return addItemStackToInventory(inventory, item);
+                }
+            } else if (container instanceof TileEntityDrawer drawer) {
+                return addItemStackToDrawer(drawer, item);
+            }
+        } else if (isChainable(target) && depth < MoreGears.CONFIG.funnelRedirectLimit) {
+            int thisrot = getOrientation(world.getBlockMetadata(x, y, z));
+            if (thisrot == Facing.oppositeSide[rot]) {
+                return true;
+            }
+            int tx = x - Facing.offsetXForSide[thisrot];
+            int ty = y - Facing.offsetYForSide[thisrot];
+            int tz = z - Facing.offsetZForSide[thisrot];
+            return insertItemStackRec(world, tx, ty, tz, thisrot, item, ++depth);
+        }
+        return true;
+    }
+
+    public boolean tryAddItemStackToSlot(IInventory inventory, ItemStack item, int slot) {
         ItemStack is = inventory.getStackInSlot(slot);
 
         if (is == null) {
             inventory.setInventorySlotContents(slot, item);
-            entity.setEntityDead();
             return false;
-        } else if (is.getItem() == item.getItem() && is.isStackable() && is.stackSize != is.getMaxStackSize()) {
+        } else if (itemsAreEqual(item, is) && is.isStackable() && is.stackSize != is.getMaxStackSize()) {
             int roomfor = is.getMaxStackSize() - is.stackSize;
             if (item.stackSize <= roomfor) {
                 is.stackSize += item.stackSize;
-                entity.setEntityDead();
                 return false;
             } else {
                 is.stackSize = is.getMaxStackSize();
@@ -158,30 +185,31 @@ public class BlockGearFunnel extends Block {
         return true;
     }
 
-    public void addEntityItemToFurnace(IInventory inventory, EntityItem entity, int rotation) {
+    public boolean addItemStackToFurnace(IInventory inventory, ItemStack item, int rotation) {
         if (Facing.offsetYForSide[rotation] == 0) {
-            tryAddEntityItemToSlot(inventory, entity, 1);
+            return tryAddItemStackToSlot(inventory, item, 1);
         } else {
-            tryAddEntityItemToSlot(inventory, entity, 0);
+            return tryAddItemStackToSlot(inventory, item, 0);
         }
     }
 
-    public void addEntityItemToIncinerator(IInventory inventory, EntityItem entity, int rotation) {
+    public boolean addItemStackToIncinerator(IInventory inventory, ItemStack item, int rotation) {
         if (Facing.offsetYForSide[rotation] == 0) {
-            tryAddEntityItemToSlot(inventory, entity, 18);
+            return tryAddItemStackToSlot(inventory, item, 18);
         } else {
             for (int i = 0; i < 9; ++i) {
-                if (!tryAddEntityItemToSlot(inventory, entity, i)) break;
+                if (!tryAddItemStackToSlot(inventory, item, i)) return false;
             }
         }
+        return true;
     }
 
-    public void addEntityItemToInventory(IInventory inventory, EntityItem entity) {
+    public boolean addItemStackToInventory(IInventory inventory, ItemStack item) {
         int invsize = inventory.getSizeInventory();
-
         for (int i = 0; i < invsize; ++i) {
-            if (!tryAddEntityItemToSlot(inventory, entity, i)) break;
+            if (!tryAddItemStackToSlot(inventory, item, i)) return false;
         }
+        return true;
     }
 
     public IInventory getChestInventory(World world, int x, int y, int z) {
@@ -207,12 +235,10 @@ public class BlockGearFunnel extends Block {
         return null;
     }
 
-    public void addEntityItemToDrawer(TileEntityDrawer drawer, EntityItem entity) {
-        ItemStack item = entity.item;
-
+    public boolean addItemStackToDrawer(TileEntityDrawer drawer, ItemStack item) {
         int id = item.getItemID();
         if (item.hasTagCompound() || id == Items.POTION.itemID || id == Items.SPLASH_POTION.itemID || id == Items.BOTTLED_FLAME.itemID || id == Items.FLASH_FLASK.itemID) {
-            return;
+            return true;
         }
         DrawerStack dstack = drawer.getData();
 
@@ -221,158 +247,42 @@ public class BlockGearFunnel extends Block {
             if (!item.isStackable()) {
                 dstack.unstackables.add(item);
             }
-            entity.setEntityDead();
-            return;
+            return false;
         }
 
-        if (id != drawer.getItemID()) return;
         int MAX = DrawerStack.maxCount(id);
-        if (drawer.getStackSize() >= MAX) return;
+        if (drawer.getStackSize() >= MAX) return true;
 
-        if (!item.isStackable()) {
+        if (!item.isStackable() && MoreGears.IDsAreEqual(item, dstack.item)) {
             dstack.add(item.stackSize);
             dstack.unstackables.add(item);
-            entity.setEntityDead();
-        } else  {
+            return false;
+        } else if (itemsAreEqual(item, dstack.item))  {
             int icount = item.stackSize;
             int roomfor = MAX - icount;
 
             if (icount <= roomfor) {
                 dstack.add(icount);
-                entity.setEntityDead();
+                return false;
             } else {
                 dstack.add(roomfor);
                 item.stackSize -= roomfor;
             }
         }
+        return true;
     }
 
-    public void extractItem(World world, int x, int y, int z) {
-        if (world.isRemote || !MoreGears.CONFIG.enableFunnels) return;
-
-        int metadata = world.getBlockMetadata(x, y, z);
-        int rot = getOrientation(metadata);
-
-        int tx = x + Facing.offsetXForSide[rot];
-        int ty = y + Facing.offsetYForSide[rot];
-        int tz = z + Facing.offsetZForSide[rot];
-
-        int bid = world.getBlockId(tx, ty, tz);
-        Block target = Blocks.BLOCKS_LIST[bid];
-
-        if (target instanceof BlockContainer) {
-            ItemStack item = null;
-
-            TileEntity container = world.getBlockTileEntity(tx, ty, tz);
-            if (container instanceof IInventory inventory) {
-                if (target.blockID == Blocks.CHEST.blockID) {
-                    IInventory chestinv = getChestInventory(world, tx, ty, tz);
-                    if (chestinv != null) item = getFirstItemStackFromInventory(chestinv);
-                } else if (
-                        container instanceof TileEntityFurnace ||
-                                container instanceof TileEntityBlastFurnace ||
-                                container instanceof TileEntityRefridgifreezer) {
-                    item = getFirstItemStackFromInventory(inventory, 2);
-                } else if (container instanceof TileEntityIncinerator) {
-                    item = getFirstItemStackFromInventory(inventory, 9,18);
-                } else {
-                    item = getFirstItemStackFromInventory(inventory);
-                }
-            } else if (container instanceof TileEntityDrawer drawer) {
-                item = getItemStackFromDrawer(drawer);
-            }
-
-            int ox = x - Facing.offsetXForSide[rot];
-            int oy = y - Facing.offsetYForSide[rot];
-            int oz = z - Facing.offsetZForSide[rot];
-
-            Block into = Blocks.BLOCKS_LIST[world.getBlockId(ox, oy, oz)];
-
-            if (item != null) {
-                if (into instanceof BlockGearConveyorBelt) {
-                    dropItemElevated(world, ox, oy, oz, item);
-                    world.playAuxSFX(2000, x, y, z, 0);
-                } else if (into instanceof BlockContainer) {
-                    EntityItem leftovers = insertEntityItem(world, ox, oy, oz, rot, new EntityItem(world, ox, oy, oz, item));
-                    if (leftovers != null) {
-                        leftovers = insertEntityItem(world, tx, ty, tz, rot, leftovers);
-                        if (leftovers != null) {
-                            dropBlockAsItem_do(world, ox, oy, oz, item);
-                            world.playAuxSFX(2000, x, y, z, 0);
-                        }
-                    }
-                } else {
-                    dropBlockAsItem_do(world, ox, oy, oz, item);
-                    world.playAuxSFX(2000, x, y, z, 0);
-                }
-            } else {
-                if (into.blockID == 0) {
-                    world.playAuxSFX(1001, x, y, z, 0);
-                }
-                for(int i = 0; i < 3; ++i) {
-                    double particle_x = (double)ox + MoreGears.random.nextDouble();
-                    double particle_y = (double)oy + MoreGears.random.nextDouble();
-                    double particle_z = (double)oz + MoreGears.random.nextDouble();
-                    world.spawnParticle("smoke", particle_x, particle_y, particle_z, -0.1 * Facing.offsetXForSide[rot], -0.1 * Facing.offsetYForSide[rot], -0.1 * Facing.offsetZForSide[rot]);
-                }
-            }
-        }
+    public static boolean isInsertable(Block b) {
+        return b instanceof BlockContainer || isChainable(b);
     }
 
-    public void dropItemElevated(World world, int x, int y, int z, ItemStack itemstack) {
-        if (world.isRemote) return;
-
-        double tx = x + 0.5;
-        double ty = y + 0.75;
-        double tz = z + 0.5;
-        EntityItem item =new EntityItem(world, tx, ty, tz, itemstack);
-        item.delayBeforeCanPickup = 10;
-        world.entityJoinedWorld(item);
+    public static boolean isChainable(Block b) {
+        return b instanceof BlockGearFunnel &&
+                        MoreGears.CONFIG.funnelRedirectLimit > 0 &&
+                        b.blockID != MoreGears.FUNNEL_ACTIVE.blockID &&
+                        (MoreGears.CONFIG.idleSiphonChains || b.blockID != MoreGears.SIPHON_IDLE.blockID);
     }
 
-    public ItemStack getFirstItemStackFromInventory(IInventory inventory) {
-        return getFirstItemStackFromInventory(inventory, 0, inventory.getSizeInventory());
-    }
-
-    public ItemStack getFirstItemStackFromInventory(IInventory inventory, int slot) {
-        return getFirstItemStackFromInventory(inventory, slot, slot+1);
-    }
-
-    public ItemStack getFirstItemStackFromInventory(IInventory inventory, int minslot, int maxslot) {
-        ItemStack item;
-        for (int i = minslot; i < maxslot; ++i) {
-            if ((item = inventory.getStackInSlot(i)) != null) {
-                inventory.setInventorySlotContents(i, null);
-                return item;
-            }
-        }
-        return null;
-    }
-
-    public ItemStack getItemStackFromDrawer(TileEntityDrawer drawer) {
-        if (drawer.getItemID() == -1) { return null; }
-        if (drawer.getStackSize() < 0) { return null; }
-
-        ItemStack item = drawer.getStack();
-        ItemStack fetched;
-        DrawerStack dstack = drawer.getData();
-
-        if (Items.ITEMS_LIST[item.getItemID()].getItemStackLimit() == 1) {
-            fetched = dstack.unstackables.getFirst();
-            dstack.subtract(1);
-            dstack.unstackables.removeFirst();
-            if (drawer.getStackSize() <= 0) DrawerStack.set(dstack, new ItemStack(-1, 0, 0));
-        } else {
-            //int maxstacksize = Items.ITEMS_LIST[drawer.getStack().getItemID()].getItemStackLimit();
-            int count = Math.min(item.getMaxStackSize(), drawer.getStackSize());
-            fetched = new ItemStack(item.getItemID(), count);
-            dstack.subtract(count);
-            if (drawer.getStackSize() <= 0) { DrawerStack.set(dstack, new ItemStack(-1, 0, 0)); }
-        }
-        return fetched;
-    }
-
-    /*
     @Override
     public void harvestBlock(World world, EntityPlayer player, int x, int y, int z, int metadata) {
         //player.addStat(StatList.BLOCKS_MINED[this.blockID], 1); // crashes
@@ -380,6 +290,7 @@ public class BlockGearFunnel extends Block {
         player.addToPlayerScore(null, 1, true);
     }
 
+    /*
     @Override
     public void onBlockDestroyedByExplosion(World world, int x, int y, int z) {
         int metadata = world.getBlockMetadata(x, y, z);
@@ -410,16 +321,7 @@ public class BlockGearFunnel extends Block {
 
     @Override
     public void updateTick(World world, int x, int y, int z, Random random) {
-        if (world.isRemote) return;
-
-        int metadata = world.getBlockMetadata(x, y, z);
-        boolean beingPowered = world.isBlockIndirectlyGettingPowered(x, y, z);
-
-        if (isPowered && !beingPowered) {
-            world.setBlockAndMetadataWithNotify(x, y, z, MoreGears.FUNNEL_IDLE.blockID, metadata);
-        } else if (!isPowered && beingPowered) {
-            world.setBlockAndMetadataWithNotify(x, y, z, MoreGears.FUNNEL_ACTIVE.blockID, metadata);
-        }
+        updateFunnel(world, x, y, z);
     }
 
     @Override
@@ -442,20 +344,19 @@ public class BlockGearFunnel extends Block {
         if (world.isRemote || !MoreGears.CONFIG.enableFunnels) return;
 
         int metadata = world.getBlockMetadata(x, y, z);
-        boolean beingPowered = world.isBlockIndirectlyGettingPowered(x, y, z);
+        boolean beingPowered = world.isBlockGettingPowered(x, y, z);// || world.isBlockIndirectlyGettingPowered(x, y, z);
         if (isPowered && !beingPowered) {
             world.setBlockAndMetadataWithNotify(x, y, z, MoreGears.FUNNEL_IDLE.blockID, metadata);
         } else if (!isPowered && beingPowered) {
             world.setBlockAndMetadataWithNotify(x, y, z, MoreGears.FUNNEL_ACTIVE.blockID, metadata);
-            extractItem(world, x, y, z);
         }
     }
 
     @Override
-    public int idPicked(World world, int x, int y, int z) { return MoreGears.FUNNEL_IDLE.getItemID(); }
+    public int idPicked(World world, int x, int y, int z) { return this.getItemID(); }
 
     @Override
-    public int idDropped(int metadata, Random random) { return MoreGears.FUNNEL_IDLE.getItemID(); }
+    public int idDropped(int metadata, Random random) { return this.getItemID(); }
 
     /* piston code */
     public static int getOrientation(int metadata) { return metadata & 7; }

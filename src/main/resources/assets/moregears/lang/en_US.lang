@@ -1,3 +1,8 @@
 tile.moregears.block_funnel_idle.name=Funnel
-tile.moregears.block_funnel_active.name=Funnel (Powered)
-config.catroidvaniagearhelper.enable_funnels.name
+tile.moregears.block_funnel_active.name=Funnel (Closed)
+tile.moregears.block_siphon_idle.name=Siphon
+tile.moregears.block_siphon_active.name=Siphon (Powered)
+config.moregears.enable_funnels.name=Enable Funnels
+config.moregears.funnel_item_limit.name=Funnel Insert Limit
+config.moregears.funnel_item_limit_extract.name=Siphon Extract Limit
+config.moregears.drawer_min.name=Min Drawer Count

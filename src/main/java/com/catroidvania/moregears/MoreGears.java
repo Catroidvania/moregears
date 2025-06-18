@@ -4,6 +4,7 @@ import com.fox2code.foxloader.config.ConfigEntry;
 import com.fox2code.foxloader.loader.Mod;
 import net.minecraft.common.block.Blocks;
 import net.minecraft.common.item.ItemStack;
+import net.minecraft.common.item.Items;
 import net.minecraft.common.recipe.CraftingManager;
 
 import java.util.Random;
@@ -12,6 +13,8 @@ public class MoreGears extends Mod {
     public static final MoreGearsConfig CONFIG = new MoreGearsConfig();
     public static BlockGearFunnel FUNNEL_IDLE;
     public static BlockGearFunnel FUNNEL_ACTIVE;
+    public static BlockGearSiphon SIPHON_IDLE;
+    public static BlockGearSiphon SIPHON_ACTIVE;
     public static Random random = new Random();
 
 
@@ -23,15 +26,49 @@ public class MoreGears extends Mod {
         CraftingManager.getInstance().addRecipe(new ItemStack(FUNNEL_IDLE),
                 "SGS",
                 "S S",
-                "SGS",
+                "S S",
                 'S', Blocks.STONE, 'G', Blocks.GEAR);
+
+        SIPHON_IDLE = new BlockGearSiphon("block_siphon_idle", false);
+        SIPHON_ACTIVE = new BlockGearSiphon("block_siphon_active", true);
+        CraftingManager.getInstance().addRecipe(new ItemStack(SIPHON_IDLE),
+                "SGS",
+                "SIS",
+                "SGS",
+                'S', Blocks.STONE, 'G', Blocks.GEAR, 'I', Items.GOLD_INGOT);
     }
 
     public static class MoreGearsConfig {
         @ConfigEntry(configName = "Enable Funnels", configPath = "enable_funnels")
         public boolean enableFunnels = true;
 
-        //@ConfigEntry(configName = "Funnel Item Limit", configPath = "funnel_item_limit", lowerBounds = 0, upperBounds = 64)
-        //public int funnelThroughputMax = 64;
+        @ConfigEntry(configName = "Funnel Insert Limit", configPath = "funnel_item_limit", lowerBounds = 1, upperBounds = 64)
+        public int funnelThroughputMax = 16;
+
+        @ConfigEntry(configName = "Siphon Extract Limit", configPath = "funnel_item_limit_extract", lowerBounds = 1, upperBounds = 64)
+        public int funnelThroughputExtractMax = 4;
+
+        @ConfigEntry(configName = "Funnel Chain Limit", configPath = "funnel_chain_limit", lowerBounds = 0, upperBounds = 64)
+        public int funnelRedirectLimit = 16;
+
+        @ConfigEntry(configName = "Unpowered Siphons Chain", configPath = "unpowered_siphon_can_chain")
+        public boolean idleSiphonChains = false;
+
+        @ConfigEntry(configName = "Min Drawer Count", configPath = "drawer_min", lowerBounds = 0, upperBounds = 64)
+        public int minDrawerStackSize = 1;
     }
+
+    // from drawer code
+    public static boolean itemsAreEqual(ItemStack a, ItemStack b) {
+        if (a.getItemID() == b.getItemID()) {
+            return a.itemDamage == b.itemDamage;
+        } else {
+            return false;
+        }
+    }
+
+    public static boolean IDsAreEqual(ItemStack a, ItemStack b) {
+        return a.getItemID() == b.getItemID();
+    }
+
 }
