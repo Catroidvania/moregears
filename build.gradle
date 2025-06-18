@@ -29,10 +29,10 @@ jar {
 
 foxloader {
     modId = "moregears"
-    modName = "more gears"
+    modName = "moregears"
     modIcon = "assets/moregears/icon.png"
     modVersion = project.version
     modAuthors = "catroidvania"
     modMain = "com.catroidvania.moregears.MoreGears"
-    modDesc("more gears")
+    modDesc("we have hoppers at home")
 }

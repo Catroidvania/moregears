@@ -1,4 +1,4 @@
-# moregears
+# more gears
 
 item schmoovement ideas
 
