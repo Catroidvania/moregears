@@ -54,6 +54,6 @@ items are sucked into funnels pretty fast but the insert limit should be equal t
 
 example autosmelter
 
-[autosmelter](img/autosmelter.png)
+![autosmelter](img/autosmelter.png)
 
-[autosmelter top](img/autosmeltertop.png)
+![autosmelter top](img/autosmeltertop.png)
