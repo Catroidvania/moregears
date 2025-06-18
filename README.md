@@ -41,6 +41,8 @@ works on
 - incinerator
 - drawers
 
+furnace top/bottom inputs to item slot, furnace sides input to fuel, extracts output from any side
+
 # config options
 
 | option                  | description                                                                         | 
