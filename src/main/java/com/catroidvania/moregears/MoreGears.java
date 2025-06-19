@@ -12,11 +12,15 @@ import net.minecraft.common.item.ItemStack;
 import net.minecraft.common.item.Items;
 import net.minecraft.common.recipe.CraftingManager;
 import net.minecraft.common.world.World;
+import org.lwjgl.Sys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Random;
 
 public class MoreGears extends Mod {
     public static final MoreGearsConfig CONFIG = new MoreGearsConfig();
+    private static final Logger log = LoggerFactory.getLogger(MoreGears.class);
     public static BlockGearFunnel FUNNEL_IDLE;
     public static BlockGearFunnel FUNNEL_ACTIVE;
     public static BlockGearSiphon SIPHON_IDLE;
@@ -88,24 +92,29 @@ public class MoreGears extends Mod {
     }
 
     public static IInventory getChestInventory(World world, int x, int y, int z) {
-        if (world.getBlockId(x, y, z) == Blocks.CHEST.blockID) {
-            TileEntityChest chest = (TileEntityChest) world.getBlockTileEntity(x, y, z);
-            if (world.getBlockId(x - 1, y, z) == Blocks.CHEST.blockID) {
-                return new InventoryLargeChest((TileEntityChest) world.getBlockTileEntity(x - 1, y, z), chest);
-            }
+        int bid;
+        try {
+            if ((bid = world.getBlockId(x, y, z)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
+                TileEntityChest chest = (TileEntityChest) world.getBlockTileEntity(x, y, z);
+                if ((bid = world.getBlockId(x - 1, y, z)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
+                    return new InventoryLargeChest((TileEntityChest) world.getBlockTileEntity(x - 1, y, z), chest);
+                }
 
-            if (world.getBlockId(x + 1, y, z) == Blocks.CHEST.blockID) {
-                return new InventoryLargeChest(chest, (TileEntityChest) world.getBlockTileEntity(x + 1, y, z));
-            }
+                if ((bid = world.getBlockId(x + 1, y, z)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
+                    return new InventoryLargeChest(chest, (TileEntityChest) world.getBlockTileEntity(x + 1, y, z));
+                }
 
-            if (world.getBlockId(x, y, z - 1) == Blocks.CHEST.blockID) {
-                return new InventoryLargeChest((TileEntityChest) world.getBlockTileEntity(x, y, z - 1), chest);
-            }
+                if ((bid = world.getBlockId(x, y, z - 1)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
+                    return new InventoryLargeChest((TileEntityChest) world.getBlockTileEntity(x, y, z - 1), chest);
+                }
 
-            if (world.getBlockId(x, y, z + 1) == Blocks.CHEST.blockID) {
-                return new InventoryLargeChest(chest, (TileEntityChest) world.getBlockTileEntity(x, y, z + 1));
+                if ((bid = world.getBlockId(x, y, z + 1)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
+                    return new InventoryLargeChest(chest, (TileEntityChest) world.getBlockTileEntity(x, y, z + 1));
+                }
+                return chest;
             }
-            return chest;
+        } catch (RuntimeException e) {
+            log.error("what?: ", e);
         }
         return null;
     }

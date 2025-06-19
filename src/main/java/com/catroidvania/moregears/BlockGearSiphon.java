@@ -57,13 +57,12 @@ public class BlockGearSiphon extends BlockGearFunnel {
         int tz = z + Facing.offsetZForSide[rot];
 
         int bid = world.getBlockId(tx, ty, tz);
-        Block target = Blocks.BLOCKS_LIST[bid];
-
-        if (target instanceof BlockContainer) {
+        //Block target = Blocks.BLOCKS_LIST[bid];
+        TileEntity container = world.getBlockTileEntity(x, y, z);
+        if (container != null) {
             ItemStack item = null;
             int cap = MoreGears.CONFIG.funnelThroughputExtractMax;
 
-            TileEntity container = world.getBlockTileEntity(tx, ty, tz);
             if (container instanceof IInventory inventory) {
                 if (container instanceof TileEntityChest) {
                     inventory = MoreGears.getChestInventory(world, tx, ty, tz);

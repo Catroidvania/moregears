@@ -17,7 +17,7 @@ import java.util.Random;
 
 public class BlockComparator extends BlockGearWait {
     // good nuff
-    public static final float[] thresholds = new float[]{0.0f, 0.33333f, 0.66666f, 0.99999f};
+    public static final float[] thresholds = new float[]{0.0f, 0.33333f, 0.66666f, 1.0f};
 
     public BlockComparator(String id, boolean state) {
         super(id, state);
@@ -62,7 +62,8 @@ public class BlockComparator extends BlockGearWait {
     public boolean isProvidingPowerPossible(World world, int x, int y, int z, int metadata) {
         float threshold = thresholds[(metadata & 12) >> 2];
         return switch (metadata & 3) {
-            case 0 -> howFilled(world, x, y, z + 1) > threshold;
+            case 0 ->
+                howFilled(world, x, y, z + 1) > threshold;
             case 1 -> howFilled(world, x - 1, y, z) > threshold;
             case 2 -> howFilled(world, x, y, z - 1) > threshold;
             case 3 -> howFilled(world, x + 1, y, z) > threshold;
@@ -79,12 +80,12 @@ public class BlockComparator extends BlockGearWait {
     }
 
     public float howFilled(World world, int x, int y, int z) {
-        int bid = world.getBlockId(x, y, z);
-        if (Blocks.BLOCKS_LIST[bid] instanceof BlockContainer block) {
-            TileEntity te = world.getBlockTileEntity(x, y, z);
-            ItemStack item;
-            int max = 64;
-            int has = 0;
+        //int bid = world.getBlockId(x, y, z);
+        TileEntity te = world.getBlockTileEntity(x, y, z);
+        ItemStack item;
+        int max = 64;
+        int has = 0;
+        if (te != null) {
             if (te instanceof IInventory inv) {
                 if (te instanceof TileEntityChest) {
                     inv = MoreGears.getChestInventory(world, x, y, z);
@@ -114,16 +115,14 @@ public class BlockComparator extends BlockGearWait {
                 int itemid = ted.getItemID();
 
                 if (itemid >= 0) {
-                    if (ted.isDrawerFull()) return 1.0f;
+                    if (ted.isDrawerFull()) return 2.0f;
                     max = DrawerStack.maxCount(itemid);
                     has = ted.getStackSize();
                 }
             }
-
             if (has == 0 || max == 0) return 0.0f;
-            return has == max ? 1.0f : (float)has / max;
+            return has == max ? 2.0f : (float) has / max;
         }
-
         return 0.0f;
     }
 
@@ -141,4 +140,7 @@ public class BlockComparator extends BlockGearWait {
 
     @Override
     public boolean notDisplacedByFluids() { return true; }
+
+    @Override
+    public boolean isACircuit() { return true; }
 }

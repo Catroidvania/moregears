@@ -131,10 +131,8 @@ public class BlockGearFunnel extends Block {
     public boolean insertItemStackRec(World world, int x, int y, int z, int rot, ItemStack item, int depth) {
         if (/*world.isRemote ||*/ !MoreGears.CONFIG.enableFunnels || MoreGears.CONFIG.funnelThroughputMax == 0) return true;
 
-        int bid = world.getBlockId(x, y, z);
-        Block target = Blocks.BLOCKS_LIST[bid];
-        if (target instanceof BlockContainer) {
-            TileEntity container = world.getBlockTileEntity(x, y, z);
+        TileEntity container = world.getBlockTileEntity(x, y, z);
+        if (container != null) {
             boolean shouldLive = true;
             if (container instanceof IInventory inventory) {
                 if (container instanceof TileEntityChest) {
@@ -157,7 +155,7 @@ public class BlockGearFunnel extends Block {
                 world.notifyBlocksOfNeighborChange(x, y, z, Blocks.DRAWER.blockID);
             }
             return shouldLive;
-        } else if (isChainable(target) && depth < MoreGears.CONFIG.funnelRedirectLimit) {
+        } else if (isChainable(Blocks.BLOCKS_LIST[world.getBlockId(x, y, z)]) && depth < MoreGears.CONFIG.funnelRedirectLimit) {
             int thisrot = getOrientation(world.getBlockMetadata(x, y, z));
             if (thisrot == Facing.oppositeSide[rot]) {
                 return true;
