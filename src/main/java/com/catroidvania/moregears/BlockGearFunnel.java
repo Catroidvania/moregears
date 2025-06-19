@@ -11,7 +11,6 @@ import net.minecraft.common.block.tileentity.*;
 import net.minecraft.common.entity.Entity;
 import net.minecraft.common.entity.EntityLiving;
 import net.minecraft.common.entity.inventory.IInventory;
-import net.minecraft.common.entity.inventory.InventoryLargeChest;
 import net.minecraft.common.entity.other.EntityItem;
 import net.minecraft.common.entity.player.EntityPlayer;
 import net.minecraft.common.item.ItemStack;
@@ -60,7 +59,7 @@ public class BlockGearFunnel extends Block {
     protected void allocateTextures() {
         this.addTexture("funnel_top" + (isPowered ? "_powered" : ""), Face.TOP);
         this.addTexture("funnel_side" + (isPowered ? "_powered" : ""), Face.EAST);
-        this.addTexture("funnel_bottom" + (isPowered ? "_powered" : ""), Face.BOTTOM);
+        this.addTexture("funnel_bottom", Face.BOTTOM);
     }
 
     @Override
@@ -68,6 +67,7 @@ public class BlockGearFunnel extends Block {
         float a = 0.0625F;
         int metadata = world.getBlockMetadata(x, y, z);
         int rot = getOrientation(metadata);
+        if (rot > 5) rot = 0;
         int xo = Facing.offsetXForSide[rot];
         int yo = Facing.offsetYForSide[rot];
         int zo = Facing.offsetZForSide[rot];
@@ -93,7 +93,7 @@ public class BlockGearFunnel extends Block {
 
     @Override
     public void onEntityCollidedWithBlock(World world, int x, int y, int z, Entity entity) {
-        if (world.isRemote || isPowered || !MoreGears.CONFIG.enableFunnels) return;
+        if (/*world.isRemote ||*/ isPowered || !MoreGears.CONFIG.enableFunnels) return;
 
         if (entity instanceof EntityItem ei) {
             ItemStack item;
@@ -129,7 +129,7 @@ public class BlockGearFunnel extends Block {
     }
 
     public boolean insertItemStackRec(World world, int x, int y, int z, int rot, ItemStack item, int depth) {
-        if (world.isRemote || !MoreGears.CONFIG.enableFunnels || MoreGears.CONFIG.funnelThroughputMax == 0) return true;
+        if (/*world.isRemote ||*/ !MoreGears.CONFIG.enableFunnels || MoreGears.CONFIG.funnelThroughputMax == 0) return true;
 
         int bid = world.getBlockId(x, y, z);
         Block target = Blocks.BLOCKS_LIST[bid];
@@ -138,9 +138,9 @@ public class BlockGearFunnel extends Block {
             boolean shouldLive = true;
             if (container instanceof IInventory inventory) {
                 if (container instanceof TileEntityChest) {
-                    IInventory chestinv = MoreGears.getChestInventory(world, x, y, z);
-                    if (chestinv != null) {
-                        shouldLive = addItemStackToInventory(chestinv, item);
+                    inventory = MoreGears.getChestInventory(world, x, y, z);
+                    if (inventory != null) {
+                        shouldLive = addItemStackToInventory(inventory, item);
                     }
                 } else if (container instanceof TileEntityFurnace ||
                                 container instanceof TileEntityBlastFurnace ||
@@ -151,7 +151,7 @@ public class BlockGearFunnel extends Block {
                 } else {
                     shouldLive = addItemStackToInventory(inventory, item);
                 }
-                inventory.onInventoryChanged();
+                if (inventory != null) inventory.onInventoryChanged();
             } else if (container instanceof TileEntityDrawer drawer) {
                 shouldLive = addItemStackToDrawer(drawer, item);
                 world.notifyBlocksOfNeighborChange(x, y, z, Blocks.DRAWER.blockID);
@@ -268,6 +268,7 @@ public class BlockGearFunnel extends Block {
     @Override
     public void harvestBlock(World world, EntityPlayer player, int x, int y, int z, int metadata) {
         //player.addStat(StatList.BLOCKS_MINED[this.blockID], 1); // crashes
+        //if (world.isRemote) return;
         this.dropBlockAsItem_do(world, x, y, z, new ItemStack(this.getItemID(), 1, this.damageDropped(metadata)));
         player.addToPlayerScore(null, 1, true);
     }
@@ -285,6 +286,7 @@ public class BlockGearFunnel extends Block {
 
     @Override
     public int onBlockPlacedWithOffset(World world, int x, int y, int z, int blockFace, float xVec, float yVec, float zVec, int metadata) {
+        //if (world.isRemote) return 0;
         int m = metadata & 7 | blockFace;
         world.setBlockMetadataWithNotify(x, y, z, m);
         return m;
@@ -292,21 +294,25 @@ public class BlockGearFunnel extends Block {
 
     @Override
     public void onBlockAdded(World world, int x, int y, int z) {
-        if (!world.isRemote) world.scheduleBlockUpdate(x, y, z, MoreGears.FUNNEL_IDLE.blockID, 0);
+        //if (!world.isRemote) world.scheduleBlockUpdate(x, y, z, MoreGears.FUNNEL_IDLE.blockID, 0);
+        updateFunnel(world, x, y, z);
     }
 
     @Override
     public void updateTick(World world, int x, int y, int z, Random random) {
-        if (!world.isRemote) updateFunnel(world, x, y, z);
+        //if (!world.isRemote)
+        updateFunnel(world, x, y, z);
     }
 
     @Override
     public void onNeighborBlockChange(World world, int x, int y, int z, int delay) {
-        if (!world.isRemote) updateFunnel(world, x, y, z);
+        //if (!world.isRemote)
+        updateFunnel(world, x, y, z);
     }
 
     @Override
     public boolean doWrenchRotation(World world, int x, int y, int z, int metadata, int facing, EntityLiving player) {
+        //if (world.isRemote) return false;
         int rot = getOrientation(metadata);
         if (player.isSneaking()) {
             world.setBlockMetadata(x, y, z, Facing.oppositeSide[rot]);

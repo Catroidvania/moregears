@@ -42,17 +42,20 @@ public class BlockComparator extends BlockGearWait {
     @Override
     public void onBlockAdded(World world, int x, int y, int z) {
         super.onBlockAdded(world, x, y, z);
-        if (!world.isRemote) world.scheduleBlockUpdate(x, y, z, MoreGears.COMPARATOR_IDLE.blockID, 0);
+        //if (!world.isRemote)
+        world.scheduleBlockUpdate(x, y, z, MoreGears.COMPARATOR_IDLE.blockID, 0);
     }
 
     @Override
     public void updateTick(World world, int x, int y, int z, Random random) {
-        if (!world.isRemote) updateComparator(world, x, y, z);
+        //if (!world.isRemote)
+        updateComparator(world, x, y, z);
     }
 
     @Override
     public void onNeighborBlockChange(World world, int x, int y, int z, int id) {
-        if (!world.isRemote) updateComparator(world, x, y, z);
+        //if (!world.isRemote)
+        updateComparator(world, x, y, z);
     }
 
     @Override
@@ -70,7 +73,8 @@ public class BlockComparator extends BlockGearWait {
     @Override
     public boolean blockActivated(World world, int x, int y, int z, EntityPlayer player) {
         super.blockActivated(world, x, y, z, player);
-        if (!world.isRemote) world.scheduleBlockUpdate(x, y, z, MoreGears.COMPARATOR_IDLE.blockID, 0);
+        //if (!world.isRemote)
+        updateComparator(world, x, y, z);
         return true;
     }
 

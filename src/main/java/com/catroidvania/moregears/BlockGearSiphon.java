@@ -33,7 +33,7 @@ public class BlockGearSiphon extends BlockGearFunnel {
     protected void allocateTextures() {
         this.addTexture("siphon_top" + (isPowered ? "_powered" : ""), Face.TOP);
         this.addTexture("siphon_side" + (isPowered ? "_powered" : ""), Face.EAST);
-        this.addTexture("siphon_bottom", Face.BOTTOM);
+        this.addTexture("siphon_bottom" + (isPowered ? "_powered" : ""), Face.BOTTOM);
     }
 
     @Override
@@ -47,7 +47,7 @@ public class BlockGearSiphon extends BlockGearFunnel {
 
 
     public void extractItem(World world, int x, int y, int z) {
-        if (world.isRemote || !MoreGears.CONFIG.enableFunnels || MoreGears.CONFIG.funnelThroughputExtractMax == 0) return;
+        if (/*world.isRemote ||*/ !MoreGears.CONFIG.enableFunnels || MoreGears.CONFIG.funnelThroughputExtractMax == 0) return;
 
         int metadata = world.getBlockMetadata(x, y, z);
         int rot = getOrientation(metadata);
@@ -65,9 +65,9 @@ public class BlockGearSiphon extends BlockGearFunnel {
 
             TileEntity container = world.getBlockTileEntity(tx, ty, tz);
             if (container instanceof IInventory inventory) {
-                if (target.blockID == Blocks.CHEST.blockID) {
-                    IInventory chestinv = MoreGears.getChestInventory(world, tx, ty, tz);
-                    if (chestinv != null) item = getFirstItemStackFromInventory(chestinv, cap);
+                if (container instanceof TileEntityChest) {
+                    inventory = MoreGears.getChestInventory(world, tx, ty, tz);
+                    if (inventory != null) item = getFirstItemStackFromInventory(inventory, cap);
                 } else if (
                         container instanceof TileEntityFurnace ||
                                 container instanceof TileEntityBlastFurnace ||
@@ -79,7 +79,7 @@ public class BlockGearSiphon extends BlockGearFunnel {
                     item = getFirstItemStackFromInventory(inventory, cap);
                     if (item != null) world.notifyBlocksOfNeighborChange(x, y, z, Blocks.DRAWER.blockID);
                 }
-                inventory.onInventoryChanged();
+                if (inventory != null) inventory.onInventoryChanged();
             } else if (container instanceof TileEntityDrawer drawer) {
                 item = getItemStackFromDrawer(drawer, cap);
                 world.notifyBlocksOfNeighborChange(x, y, z, Blocks.DRAWER.blockID);
@@ -128,7 +128,7 @@ public class BlockGearSiphon extends BlockGearFunnel {
     }
 
     public void dropItemElevated(World world, int x, int y, int z, ItemStack itemstack) {
-        if (world.isRemote) return;
+        //if (world.isRemote) return;
 
         double tx = x + 0.5;
         double ty = y + 0.75;
@@ -189,11 +189,6 @@ public class BlockGearSiphon extends BlockGearFunnel {
             if (drawer.getStackSize() <= 0) { DrawerStack.set(dstack, new ItemStack(-1, 0, 0)); }
         }
         return fetched;
-    }
-
-    @Override
-    public void onBlockAdded(World world, int x, int y, int z) {
-        if (!world.isRemote) world.scheduleBlockUpdate(x, y, z, MoreGears.SIPHON_IDLE.blockID, 0);
     }
 
     @Override
