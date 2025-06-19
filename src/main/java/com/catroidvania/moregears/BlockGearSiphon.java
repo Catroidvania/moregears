@@ -15,6 +15,9 @@ import net.minecraft.common.util.Facing;
 import net.minecraft.common.util.math.AxisAlignedBB;
 import net.minecraft.common.world.World;
 
+import java.util.Random;
+
+
 public class BlockGearSiphon extends BlockGearFunnel {
 
     public BlockGearSiphon(String id, boolean state) {
@@ -63,7 +66,7 @@ public class BlockGearSiphon extends BlockGearFunnel {
             TileEntity container = world.getBlockTileEntity(tx, ty, tz);
             if (container instanceof IInventory inventory) {
                 if (target.blockID == Blocks.CHEST.blockID) {
-                    IInventory chestinv = getChestInventory(world, tx, ty, tz);
+                    IInventory chestinv = MoreGears.getChestInventory(world, tx, ty, tz);
                     if (chestinv != null) item = getFirstItemStackFromInventory(chestinv, cap);
                 } else if (
                         container instanceof TileEntityFurnace ||
@@ -74,9 +77,12 @@ public class BlockGearSiphon extends BlockGearFunnel {
                     item = getFirstItemStackFromInventory(inventory, 9,18, cap);
                 } else {
                     item = getFirstItemStackFromInventory(inventory, cap);
+                    if (item != null) world.notifyBlocksOfNeighborChange(x, y, z, Blocks.DRAWER.blockID);
                 }
+                inventory.onInventoryChanged();
             } else if (container instanceof TileEntityDrawer drawer) {
                 item = getItemStackFromDrawer(drawer, cap);
+                world.notifyBlocksOfNeighborChange(x, y, z, Blocks.DRAWER.blockID);
             }
 
             int ox = x - Facing.offsetXForSide[rot];
@@ -186,8 +192,13 @@ public class BlockGearSiphon extends BlockGearFunnel {
     }
 
     @Override
+    public void onBlockAdded(World world, int x, int y, int z) {
+        if (!world.isRemote) world.scheduleBlockUpdate(x, y, z, MoreGears.SIPHON_IDLE.blockID, 0);
+    }
+
+    @Override
     public void updateFunnel(World world, int x, int y, int z) {
-        if (world.isRemote || !MoreGears.CONFIG.enableFunnels) return;
+        if (!MoreGears.CONFIG.enableFunnels) return;
 
         int metadata = world.getBlockMetadata(x, y, z);
         boolean beingPowered = world.isBlockIndirectlyGettingPowered(x, y, z);
@@ -198,4 +209,10 @@ public class BlockGearSiphon extends BlockGearFunnel {
             extractItem(world, x, y, z);
         }
     }
+
+    @Override
+    public int idPicked(World world, int x, int y, int z) { return MoreGears.SIPHON_IDLE.getItemID(); }
+
+    @Override
+    public int idDropped(int metadata, Random random) { return MoreGears.SIPHON_IDLE.getItemID(); }
 }

@@ -4,6 +4,13 @@
   "package": "com.catroidvania.moregears.mixins",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
-    "BlockGearConveyorBeltMixins"
+    "BlockGearConveyorBeltMixins",
+    "TileEntityChestMixins",
+    "TileEntityCrateMixins",
+    "TileEntityFurnaceMixins",
+    "TileEntityIncineratorMixins",
+    "TileEntityRefridgifreezerMixins",
+    "TileEntityBlastFurnaceMixins",
+    "TileEntityDrawerMixins"
   ]
 }

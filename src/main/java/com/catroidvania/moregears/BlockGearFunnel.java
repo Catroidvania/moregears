@@ -50,7 +50,7 @@ public class BlockGearFunnel extends Block {
         }
         this.markMetadataRangeAsUsed(0, 5);
         this.setSound(StepSounds.SOUND_STONE);
-        this.setHardness(0.5F);
+        this.setHardness(0.7F);
         this.setRequiresSelfNotify();
         this.setTooltipColor(Color.GRAY.getRGB());
         this.setEffectiveTool(EnumTools.PICKAXE);
@@ -60,7 +60,7 @@ public class BlockGearFunnel extends Block {
     protected void allocateTextures() {
         this.addTexture("funnel_top" + (isPowered ? "_powered" : ""), Face.TOP);
         this.addTexture("funnel_side" + (isPowered ? "_powered" : ""), Face.EAST);
-        this.addTexture("funnel_bottom", Face.BOTTOM);
+        this.addTexture("funnel_bottom" + (isPowered ? "_powered" : ""), Face.BOTTOM);
     }
 
     @Override
@@ -135,23 +135,28 @@ public class BlockGearFunnel extends Block {
         Block target = Blocks.BLOCKS_LIST[bid];
         if (target instanceof BlockContainer) {
             TileEntity container = world.getBlockTileEntity(x, y, z);
+            boolean shouldLive = true;
             if (container instanceof IInventory inventory) {
-                if (target.blockID == Blocks.CHEST.blockID) {
-                    IInventory chestinv = getChestInventory(world, x, y, z);
-                    if (chestinv != null) return addItemStackToInventory(chestinv, item);
-                } else if (
-                        container instanceof TileEntityFurnace ||
+                if (container instanceof TileEntityChest) {
+                    IInventory chestinv = MoreGears.getChestInventory(world, x, y, z);
+                    if (chestinv != null) {
+                        shouldLive = addItemStackToInventory(chestinv, item);
+                    }
+                } else if (container instanceof TileEntityFurnace ||
                                 container instanceof TileEntityBlastFurnace ||
                                 container instanceof TileEntityRefridgifreezer) {
-                    return addItemStackToFurnace(inventory, item, rot);
+                    shouldLive = addItemStackToFurnace(inventory, item, rot);
                 } else if (container instanceof TileEntityIncinerator) {
-                    return addItemStackToIncinerator(inventory, item, rot);
+                    shouldLive = addItemStackToIncinerator(inventory, item, rot);
                 } else {
-                    return addItemStackToInventory(inventory, item);
+                    shouldLive = addItemStackToInventory(inventory, item);
                 }
+                inventory.onInventoryChanged();
             } else if (container instanceof TileEntityDrawer drawer) {
-                return addItemStackToDrawer(drawer, item);
+                shouldLive = addItemStackToDrawer(drawer, item);
+                world.notifyBlocksOfNeighborChange(x, y, z, Blocks.DRAWER.blockID);
             }
+            return shouldLive;
         } else if (isChainable(target) && depth < MoreGears.CONFIG.funnelRedirectLimit) {
             int thisrot = getOrientation(world.getBlockMetadata(x, y, z));
             if (thisrot == Facing.oppositeSide[rot]) {
@@ -210,29 +215,6 @@ public class BlockGearFunnel extends Block {
             if (!tryAddItemStackToSlot(inventory, item, i)) return false;
         }
         return true;
-    }
-
-    public IInventory getChestInventory(World world, int x, int y, int z) {
-        if (world.getBlockId(x, y, z) == Blocks.CHEST.blockID) {
-            TileEntityChest chest = (TileEntityChest) world.getBlockTileEntity(x, y, z);
-            if (world.getBlockId(x - 1, y, z) == Blocks.CHEST.blockID) {
-                return new InventoryLargeChest((TileEntityChest) world.getBlockTileEntity(x - 1, y, z), chest);
-            }
-
-            if (world.getBlockId(x + 1, y, z) == Blocks.CHEST.blockID) {
-                return new InventoryLargeChest(chest, (TileEntityChest) world.getBlockTileEntity(x + 1, y, z));
-            }
-
-            if (world.getBlockId(x, y, z - 1) == Blocks.CHEST.blockID) {
-                return new InventoryLargeChest((TileEntityChest) world.getBlockTileEntity(x, y, z - 1), chest);
-            }
-
-            if (world.getBlockId(x, y, z + 1) == Blocks.CHEST.blockID) {
-                return new InventoryLargeChest(chest, (TileEntityChest) world.getBlockTileEntity(x, y, z + 1));
-            }
-            return chest;
-        }
-        return null;
     }
 
     public boolean addItemStackToDrawer(TileEntityDrawer drawer, ItemStack item) {
@@ -305,23 +287,22 @@ public class BlockGearFunnel extends Block {
     public int onBlockPlacedWithOffset(World world, int x, int y, int z, int blockFace, float xVec, float yVec, float zVec, int metadata) {
         int m = metadata & 7 | blockFace;
         world.setBlockMetadataWithNotify(x, y, z, m);
-        updateFunnel(world, x, y, z);
         return m;
     }
 
     @Override
-    public void onBlockPlacedBy(World world, int x, int y, int z, EntityLiving player) {
-        updateFunnel(world, x, y, z);
-    }
-
-    @Override
     public void onBlockAdded(World world, int x, int y, int z) {
-        updateFunnel(world, x, y, z);
+        if (!world.isRemote) world.scheduleBlockUpdate(x, y, z, MoreGears.FUNNEL_IDLE.blockID, 0);
     }
 
     @Override
     public void updateTick(World world, int x, int y, int z, Random random) {
-        updateFunnel(world, x, y, z);
+        if (!world.isRemote) updateFunnel(world, x, y, z);
+    }
+
+    @Override
+    public void onNeighborBlockChange(World world, int x, int y, int z, int delay) {
+        if (!world.isRemote) updateFunnel(world, x, y, z);
     }
 
     @Override
@@ -335,28 +316,18 @@ public class BlockGearFunnel extends Block {
         return true;
     }
 
-    @Override
-    public void onNeighborBlockChange(World world, int x, int y, int z, int delay) {
-        updateFunnel(world, x, y, z);
-    }
 
     public void updateFunnel(World world, int x, int y, int z) {
-        if (world.isRemote || !MoreGears.CONFIG.enableFunnels) return;
+        if (!MoreGears.CONFIG.enableFunnels) return;
 
         int metadata = world.getBlockMetadata(x, y, z);
-        boolean beingPowered = world.isBlockGettingPowered(x, y, z);// || world.isBlockIndirectlyGettingPowered(x, y, z);
+        boolean beingPowered = world.isBlockIndirectlyGettingPowered(x, y, z);
         if (isPowered && !beingPowered) {
             world.setBlockAndMetadataWithNotify(x, y, z, MoreGears.FUNNEL_IDLE.blockID, metadata);
         } else if (!isPowered && beingPowered) {
             world.setBlockAndMetadataWithNotify(x, y, z, MoreGears.FUNNEL_ACTIVE.blockID, metadata);
         }
     }
-
-    @Override
-    public int idPicked(World world, int x, int y, int z) { return this.getItemID(); }
-
-    @Override
-    public int idDropped(int metadata, Random random) { return this.getItemID(); }
 
     /* piston code */
     public static int getOrientation(int metadata) { return metadata & 7; }
@@ -393,6 +364,12 @@ public class BlockGearFunnel extends Block {
             );
         }
     }
+
+    @Override
+    public int idPicked(World world, int x, int y, int z) { return MoreGears.FUNNEL_IDLE.getItemID(); }
+
+    @Override
+    public int idDropped(int metadata, Random random) { return MoreGears.FUNNEL_IDLE.getItemID(); }
 
     @Override
     public boolean notDisplacedByFluids() {
