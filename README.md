@@ -20,6 +20,8 @@ if theres no container to insert into then nothing happens
 
 top-down funnels can access items on conveyors above them
 
+![funnel recipe](img/funnelrecipe.png)
+
 ## siphons
 
 when powered they extract a stack from the container at their input end and insert into the container at the output end, or spits it on the ground like a dropper
@@ -30,6 +32,8 @@ they can chain into funnels as well or into powered siphons
 
 they dont extract continuously only when going from unpowered -> powered
 
+![siphon recipe](img/siphonrecipe.png)
+
 ## comparators
 
 outputs power when the container at the input end has items above a certain threshold
@@ -37,6 +41,8 @@ outputs power when the container at the input end has items above a certain thre
 thresholds are, not empty -> 1/3 full -> 2/3 full -> completely full
 
 for furnaces/incinerators it only measures the output slots
+
+![comparator recipe](img/comparatorrecipe.png)
 
 # compatible containers
 
