@@ -93,29 +93,27 @@ public class MoreGears extends Mod {
 
     public static IInventory getChestInventory(World world, int x, int y, int z) {
         int bid;
-        try {
-            if ((bid = world.getBlockId(x, y, z)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
-                TileEntityChest chest = (TileEntityChest) world.getBlockTileEntity(x, y, z);
-                if ((bid = world.getBlockId(x - 1, y, z)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
-                    return new InventoryLargeChest((TileEntityChest) world.getBlockTileEntity(x - 1, y, z), chest);
-                }
 
-                if ((bid = world.getBlockId(x + 1, y, z)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
-                    return new InventoryLargeChest(chest, (TileEntityChest) world.getBlockTileEntity(x + 1, y, z));
-                }
-
-                if ((bid = world.getBlockId(x, y, z - 1)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
-                    return new InventoryLargeChest((TileEntityChest) world.getBlockTileEntity(x, y, z - 1), chest);
-                }
-
-                if ((bid = world.getBlockId(x, y, z + 1)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
-                    return new InventoryLargeChest(chest, (TileEntityChest) world.getBlockTileEntity(x, y, z + 1));
-                }
-                return chest;
+        if ((bid = world.getBlockId(x, y, z)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
+            TileEntityChest chest = (TileEntityChest) world.getBlockTileEntity(x, y, z);
+            if ((bid = world.getBlockId(x - 1, y, z)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
+                return new InventoryLargeChest((TileEntityChest) world.getBlockTileEntity(x - 1, y, z), chest);
             }
-        } catch (RuntimeException e) {
-            log.error("what?: ", e);
+
+            if ((bid = world.getBlockId(x + 1, y, z)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
+                return new InventoryLargeChest(chest, (TileEntityChest) world.getBlockTileEntity(x + 1, y, z));
+            }
+
+            if ((bid = world.getBlockId(x, y, z - 1)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
+                return new InventoryLargeChest((TileEntityChest) world.getBlockTileEntity(x, y, z - 1), chest);
+            }
+
+            if ((bid = world.getBlockId(x, y, z + 1)) == Blocks.CHEST.blockID || bid == Blocks.COLORED_CHEST.blockID) {
+                return new InventoryLargeChest(chest, (TileEntityChest) world.getBlockTileEntity(x, y, z + 1));
+            }
+            return chest;
         }
+
         return null;
     }
 }

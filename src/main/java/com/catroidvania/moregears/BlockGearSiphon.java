@@ -14,11 +14,15 @@ import net.minecraft.common.item.Items;
 import net.minecraft.common.util.Facing;
 import net.minecraft.common.util.math.AxisAlignedBB;
 import net.minecraft.common.world.World;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Random;
 
 
 public class BlockGearSiphon extends BlockGearFunnel {
+
+    private static final Logger log = LoggerFactory.getLogger(BlockGearSiphon.class);
 
     public BlockGearSiphon(String id, boolean state) {
         super(id, state);
@@ -56,9 +60,9 @@ public class BlockGearSiphon extends BlockGearFunnel {
         int ty = y + Facing.offsetYForSide[rot];
         int tz = z + Facing.offsetZForSide[rot];
 
-        int bid = world.getBlockId(tx, ty, tz);
+        //int bid = world.getBlockId(tx, ty, tz);
         //Block target = Blocks.BLOCKS_LIST[bid];
-        TileEntity container = world.getBlockTileEntity(x, y, z);
+        TileEntity container = world.getBlockTileEntity(tx, ty, tz);
         if (container != null) {
             ItemStack item = null;
             int cap = MoreGears.CONFIG.funnelThroughputExtractMax;
@@ -76,12 +80,12 @@ public class BlockGearSiphon extends BlockGearFunnel {
                     item = getFirstItemStackFromInventory(inventory, 9,18, cap);
                 } else {
                     item = getFirstItemStackFromInventory(inventory, cap);
-                    if (item != null) world.notifyBlocksOfNeighborChange(x, y, z, Blocks.DRAWER.blockID);
+                    //if (item != null) world.notifyBlocksOfNeighborChange(x, y, z, Blocks.DRAWER.blockID);
                 }
-                if (inventory != null) inventory.onInventoryChanged();
+                if (inventory != null && item != null) inventory.onInventoryChanged();
             } else if (container instanceof TileEntityDrawer drawer) {
                 item = getItemStackFromDrawer(drawer, cap);
-                world.notifyBlocksOfNeighborChange(x, y, z, Blocks.DRAWER.blockID);
+                if (item != null) world.notifyBlocksOfNeighborChange(x, y, z, Blocks.DRAWER.blockID);
             }
 
             int ox = x - Facing.offsetXForSide[rot];
@@ -93,23 +97,24 @@ public class BlockGearSiphon extends BlockGearFunnel {
             if (item != null) {
                 if (into instanceof BlockGearConveyorBelt) {
                     dropItemElevated(world, ox, oy, oz, item);
-                    world.playAuxSFX(2000, x, y, z, 0);
+                    //world.playAuxSFX(2000, x, y, z, 0);
                 } else if (isInsertable(into)) {
                     if (insertItemStack(world, ox, oy, oz, rot, item)) {
-                        Block back = Blocks.BLOCKS_LIST[world.getBlockId(tx, ty, tz)];
-                        if (!isInsertable(back) || insertItemStack(world, tx, ty, tz, rot, item)) {
+                        if (!isInsertable(Blocks.BLOCKS_LIST[world.getBlockId(tx, ty, tz)]) || insertItemStack(world, tx, ty, tz, rot, item)) {
                             dropBlockAsItem_do(world, ox, oy, oz, item);
-                            world.playAuxSFX(2000, x, y, z, 0);
+                            //world.playAuxSFX(2000, x, y, z, 0);
                         }
                     }
                 } else if (into instanceof BlockGearFunnel && !isChainable(into)) {
-                    Block back = Blocks.BLOCKS_LIST[world.getBlockId(tx, ty, tz)];
-                    if (!isInsertable(back) || insertItemStack(world, tx, ty, tz, rot, item)) {
+                    if (!isInsertable(Blocks.BLOCKS_LIST[world.getBlockId(tx, ty, tz)]) || insertItemStack(world, tx, ty, tz, rot, item)) {
                         dropBlockAsItem_do(world, ox, oy, oz, item);
-                        world.playAuxSFX(2000, x, y, z, 0);
+                        //world.playAuxSFX(2000, x, y, z, 0);
                     }
                 } else {
                     dropBlockAsItem_do(world, ox, oy, oz, item);
+                    //world.playAuxSFX(2000, x, y, z, 0);
+                }
+                if (!Blocks.BLOCKS_LIST[world.getBlockId(ox, oy, oz)].isCollidable()) {
                     world.playAuxSFX(2000, x, y, z, 0);
                 }
             } else {

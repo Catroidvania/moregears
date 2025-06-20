@@ -30,6 +30,14 @@ they can chain into funnels as well or into powered siphons
 
 they dont extract continuously only when going from unpowered -> powered
 
+## comparators
+
+outputs power when the container at the input end has items above a certain threshold
+
+thresholds are, not empty -> 1/3 full -> 2/3 full -> completely full
+
+for furnaces/incinerators it only measures the output slots
+
 # compatible containers
 
 works on
@@ -42,6 +50,8 @@ works on
 - drawers
 
 furnace top/bottom inputs to item slot, furnace sides input to fuel, extracts output from any side
+
+these blocks also notify neighbors when their inventory changes 
 
 # config options
 
@@ -63,3 +73,7 @@ example autosmelter
 ![autosmelter](img/autosmelter.png)
 
 ![autosmelter top](img/autosmeltertop.png)
+
+example autodispenser
+
+![autodispenser](img/autodispenser.png)
